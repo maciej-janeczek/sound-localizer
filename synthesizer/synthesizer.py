@@ -1,34 +1,23 @@
 import pyaudio
 import wave
 import os
-import threading
 from .exceptions import *
 from .utils import *
 import glob
-from ctypes import *
-import platform
-from contextlib import contextmanager
-
-ERROR_HANDLER_FUNC = CFUNCTYPE(None, c_char_p, c_int, c_char_p, c_int, c_char_p)
-
-def py_error_handler(filename, line, function, err, fmt):
-    pass
-
-c_error_handler = ERROR_HANDLER_FUNC(py_error_handler)
-
-@contextmanager
-def noalsaerr():
-    asound = cdll.LoadLibrary('libasound.so')
-    asound.snd_lib_error_set_handler(c_error_handler)
-    yield
-    asound.snd_lib_error_set_handler(None)
+import libs.ctcsound as cs
 
 
 class Synthesizer():
 
     def __init__(self, sounds_path, type="wav"):
-        if platform.system() == "Linux":
-            os.system("jack_control start")
+        self.csound = cs.Csound()
+        self.scorePath = "resources/BarImpact.csd"
+        self.csound.compileCsd(self.scorePath)
+        self.csound.start()
+        self.csThread = cs.CsoundPerformanceThread(self.csound.csound())
+        self.csThread.play()
+
+
         self.files_path = ""
         self.files_path = []
         self.files_names_list = []
@@ -51,44 +40,13 @@ class Synthesizer():
         if len(files) != 1:
             raise SynthNameError("len(files)", "Multiple files of that name")
             return
-        note = Note(files[0], volume, pan)
-        note.start()
 
-
-class Note(threading.Thread):
-    def __init__(self, sound_name, volume, pan):
-        threading.Thread.__init__(self)
-        self.sound_name = sound_name
-        self.pan = pan
-        self.volume = volume
-
-    def run(self):
-        self.play_sound()
-
-    def play_sound(self):
-
-        chunk = 1024
-        f = wave.open(self.sound_name)
-        with noalsaerr():
-            p = pyaudio.PyAudio()
-            stream = p.open(format=p.get_format_from_width(f.getsampwidth()),
-                            channels=2,
-                            rate=f.getframerate(),
-                            output=True)
-
-            #read data
-            data = f.readframes(chunk)
-            data = to_stereo(data, self.pan, self.volume)
-
-            #play stream
-            while len(data) != 0:
-                stream.write(data)
-                data = f.readframes(chunk)
-                data = to_stereo(data, self.pan, self.volume)
-
-            #stop stream
-            stream.stop_stream()
-            stream.close()
-
-            #close PyAudio
-            p.terminate()
+        self.csound.setControlChannel("vol1", volume)
+        self.csound.setControlChannel("azimuth1", -pan*90)
+        self.csound.setControlChannel("elev1", 0.0)
+        self.csound.setControlChannel("tremAmp1", 0.0)
+        self.csound.setControlChannel("tremFreq", 5.0)
+        self.csound.setControlChannel("d360_1", 0.0)
+        self.csound.setControlChannel("elev1", 0.0)
+        self.csound.setControlChannel("mute1", 0.0)
+        self.csThread.inputMessage("i1 0 0.5 1 1 1 400 .2 .01 50 10600 0.5 0.16 0 0")
