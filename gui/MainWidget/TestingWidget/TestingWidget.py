@@ -19,7 +19,6 @@ class TestingWidget(QtWidgets.QGroupBox):
         self.setLayout(self.testing_layout)
         self.results = ResultsWidget()
         self.testing_layout.addWidget(self.results, 2)
-        self.test = Test(User("Default user", 1, Gender.MALE))
         self.answer.answeredSignal.connect(self.answered)
 
     def start_test(self, test):

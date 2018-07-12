@@ -3,6 +3,7 @@ from PyQt5 import QtGui, QtCore
 from core.user import User, Gender
 from core.test import ProcedureType, Test
 from gui.AddTestDialog import AddTestDialog
+import synthesizer as synth
 
 
 class ProgressWidget(QtWidgets.QGroupBox):
@@ -27,6 +28,7 @@ class ProgressWidget(QtWidgets.QGroupBox):
         buttons_layout.addWidget(self.b2)
         buttons_layout.addWidget(self.b5)
         self.setLayout(buttons_layout)
+        self.synth = synth.Synthesizer("resources")
 
     def new_test(self):
         self.add_new = AddTestDialog()
@@ -53,6 +55,6 @@ class ProgressWidget(QtWidgets.QGroupBox):
         self.main_window.testing.answer.setDisabled(False)
         self.b1.setDisabled(True)
         self.b2.setDisabled(False)
-        test = Test(self.user)
+        test = Test(self.user, self.synth)
         self.start_test_signal.emit(test)
 

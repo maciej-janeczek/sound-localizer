@@ -14,17 +14,16 @@ class ProcedureType(Enum):
 
 class ProcedureBasic(QtCore.QThread):
 
-    def __init__(self):
+    def __init__(self, synthesizer):
         QtCore.QThread.__init__(self)
         self.timer = QtCore.QTimer()
         self.iteration = -1
         self.answered = True
-        self.dir_v_list = [-90, -45, 0, 45, 90]
-        self.picked_v_list = []
+        self.dir_v_list = [-90.0, -45.0, 0.0, 45.0, 90.0]
+        self.dir_h_list = [-45.0, 0.0, 45.0, 90.0]
+        self.picked_list = []
         self.answers = []
-        self.synth = synth.Synthesizer("resources")
-
-        #self.dir_h_list = [-90, -45, 0, 45, 90]
+        self.synth = synthesizer
 
     def run(self):
         self.thread_func()
@@ -32,32 +31,36 @@ class ProcedureBasic(QtCore.QThread):
 
     def thread_func(self):
         self.timer.timeout.connect(self.timer_func)
-        self.timer.start(5000)
+        self.timer.start(2000)
 
     def timer_func(self):
-        if self.answered and self.iteration < 20:
+        if self.answered and self.iteration < 5:
             self.answered = False
-            self.picked_v_list.append(random.choice(self.dir_v_list))
+            self.picked_list.append([random.choice(self.dir_v_list), random.choice(self.dir_h_list)])
             self.iteration += 1
-
-        self.synth.play("string", 0.2, self.picked_v_list[self.iteration]/90.0)
+            self.synth.play(0.2, self.picked_list[self.iteration])
+        else:
+            self.timer.stop()
+            # Signal to end should be send and swith to next stage ( " Results ")
+            print("END ! :)")
 
     def check_success(self, answer):
         if not self.answered:
             self.answers.append([answer.x, answer.y])
-            print(len(self.answers), len(self.picked_v_list), self.iteration)
             self.answered = True
-            #return self.picked_v_list[self.iteration] == self.answers[self.iteration]
-            print("Generated was ", self.picked_v_list[self.iteration], "You picked ", int(self.answers[self.iteration][0]))
+            print("Generated was x:{gen_x}, y:{gen_y} -- You picked  x:{pick_x}, y:{pick_y}".format(
+                                        gen_x=self.picked_list[self.iteration][0],  
+                                        gen_y=self.picked_list[self.iteration][1], 
+                                        pick_x=self.answers[self.iteration][0],
+                                        pick_y=self.answers[self.iteration][1]))
 
 
 class Test(object):
     answered_test_signal = QtCore.pyqtSignal(int)
 
-    def __init__(self, user):
+    def __init__(self, user, synthesizer):
         self.user = user
-        self.procedure = ProcedureBasic()
-
+        self.procedure = ProcedureBasic(synthesizer)
 
     def save(self, path):
         pass
